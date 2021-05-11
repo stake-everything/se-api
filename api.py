@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import os
 import pyrebase
 import json
@@ -42,6 +42,80 @@ def get_farms():
             sites.append({"site": el["site"], "url": el["url"]})
 
     return jsonify(sites)
+
+
+@ app.route(os.path.join(conf["root"], 'farms/tags'), methods=['GET'])
+def get_farm_tags():
+    data = list(firebase.database().child("sites").get().val())
+
+    rd = {}
+    for site in data:
+        rd[site["name"]] = site["tag"]
+
+    return jsonify(rd)
+
+
+@ app.route(os.path.join(conf["root"], 'info'), methods=['GET'])
+def get_info():
+    data = dict(firebase.database().child("coins").get().val())
+
+    coins = list(data.keys())
+    for coin in coins:
+        del data[coin]["image_uri"]
+
+    return jsonify(data)
+
+
+@ app.route(os.path.join(conf["root"], 'images'), methods=['GET'])
+def get_images():
+    data = dict(firebase.database().child("coins").get().val())
+
+    coins = list(data.keys())
+    for coin in coins:
+        del data[coin]["info"]
+
+    return jsonify(data)
+
+
+@ app.route(os.path.join(conf["root"], 'info/<coin>'), methods=['GET'])
+def get_coin_info(coin):
+    data = dict(firebase.database().child("coins").get().val())
+    return jsonify(data[coin.upper()])
+
+
+@ app.route(os.path.join(conf["root"], 'coins/<farm_tag>'), methods=['GET'])
+def get_farm_coins(farm_tag):
+    data = dict(firebase.database().child("coins").get().val())
+    farms = list(firebase.database().child("sites").get().val())
+    coins = list(data.keys())
+
+    token_earned = request.args.get('token_earned')
+    roi = request.args.get('roi')
+
+    for farm in farms:
+        if farm["tag"] == farm_tag:
+            farm_name = farm["name"]
+
+    farm_coins = []
+    for coin in coins:
+        coin_site_list = data[coin]["info"]
+        for s in coin_site_list:
+            if s["site"] == farm_name:
+
+                el = []
+                el.append(coin)
+                if roi:
+                    try:
+                        el.append(s["apr"])
+                    except:
+                        el.append(s["apy"])
+
+                if token_earned:
+                    el.append(s["token_earned"])
+
+                farm_coins.append(el)
+
+    return jsonify({farm_name: farm_coins})
 
 
 # @ app.route(os.path.join(conf["root"], 'countries/<org>'), methods=['GET'])
@@ -120,5 +194,5 @@ def get_farms():
 
 
 if __name__ == "__main__":
-    # app.run(debug=True)
-    app.run(debug=False, host="0.0.0.0", port="5000")
+    app.run(debug=True)
+    # app.run(debug=False, host="0.0.0.0", port="5000")

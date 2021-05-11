@@ -1,9 +1,15 @@
 FROM python:3.6
 
-WORKDIR /app
+WORKDIR /App
 
-COPY . /app
+COPY requirements.txt /App
+COPY api.py /App
+COPY config.json /App
 
 RUN pip3 install -r requirements.txt
 
-CMD ["gunicorn", "--bind", ":8000","wsgi:app"]
+EXPOSE 5000
+
+CMD ["ls"]
+CMD ["gunicorn", "--bind", ":5000","api:app"]
+
