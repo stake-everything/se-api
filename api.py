@@ -3,7 +3,7 @@ import os
 import pyrebase
 import json
 
-# curl -X POST -H "Content-Type: application/json" -d '{"hell":"no"}' http://127.0.0.1:5000/test
+# curl -X POST -H "Content-Type: application/json" -d '{"data":"test"}' http://127.0.0.1:5000/test
 
 
 app = Flask(__name__)
