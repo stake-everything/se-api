@@ -19,9 +19,9 @@ with open(CONF_PATH + "config.json", "r") as f:
 firebase = pyrebase.initialize_app(conf['firebase'])
 
 
-@ app.route(os.path.join(conf["root"], '/api'), methods=['GET'])
+@ app.route(os.path.join(conf["root"], '/'), methods=['GET'])
 def message():
-    return "Stake Everything API. Documentation here: https://github.com/stake-everything/se-api"
+    return jsonify({"message": "Stake Everything API. Documentation here: https://github.com/stake-everything/se-api"})
 
 
 @ app.route(os.path.join(conf["root"], 'coins'), methods=['GET'])
