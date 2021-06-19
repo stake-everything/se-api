@@ -88,6 +88,9 @@ def farm(tag):
                 return jsonify(msg1)
         else:
             return jsonify(msg1)
+    elif request.method == 'DELETE':
+        out = fdb.child("farms").child(tag).remove()
+        return jsonify(msg2)
 
 
 @ app.route(os.path.join(conf["root"], 'info'), methods=['GET'])
