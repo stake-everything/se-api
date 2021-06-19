@@ -18,8 +18,9 @@ with open(CONF_PATH + "../config.json", "r") as f:
 
 # Variables
 msg0 = {"status": "failed", "message": "Unkown reason."}
-msg1 = {"status": "failed", "message": "Content error"}
+msg1 = {"status": "failed", "message": "Content error."}
 msg2 = {"status": "success"}
+msg3 = {"status": "failed", "message": "Not authorized."}
 
 firebase = pyrebase.initialize_app(conf['firebase'])
 fdb = firebase.database()
@@ -73,21 +74,32 @@ def farm(tag):
         else:
             return True
 
+    print("args", list(request.args.keys()))  # k/v
+    print("data", request.data)  # add content type you can get --data here
+    print("form", request.form)  # -F resp
+    print("json", request.json)  # add content type you can get --data here
+    print("values", request.values)  # any data here
+
+    key = request.args["key"] if "key" in list(request.args.keys()) else None
+
     #data = list(fdb.child("farms").get().val())
     if request.method == 'GET':
         out = fdb.child("farms").child(tag).get().val()
         return jsonify(out)
     elif request.method == 'POST':
-        pd = request.json
-        if pd:
-            if check_format(pd):
-                out = fdb.child("farms").child(tag).update(pd)
-                print(out)
-                return jsonify(msg2)
+        if key == conf["api_key"]:
+            pd = request.json
+            if pd:
+                if check_format(pd):
+                    out = fdb.child("farms").child(tag).update(pd)
+                    print(out)
+                    return jsonify(msg2)
+                else:
+                    return jsonify(msg1)
             else:
                 return jsonify(msg1)
         else:
-            return jsonify(msg1)
+            return jsonify(msg3), 401
     elif request.method == 'DELETE':
         out = fdb.child("farms").child(tag).remove()
         return jsonify(msg2)
@@ -113,19 +125,24 @@ def get_images():
 @ app.route(os.path.join(conf["root"], 'images/<coin>'), methods=['GET', 'POST', 'DELETE'])
 def coin_images(coin):
 
+    key = request.args["key"] if "key" in list(request.args.keys()) else None
+
     if request.method == 'GET':
         data = fdb.child("coin_images").child(coin).get().val()
         return jsonify(data)
     elif request.method == 'POST':
-        pd = request.json
-        if pd and len(pd) == 1:
-            out = fdb.child("coin_images").update(pd)
-            if out == pd:
-                return jsonify(msg2)
+        if key == conf["api_key"]:
+            pd = request.json
+            if pd and len(pd) == 1:
+                out = fdb.child("coin_images").update(pd)
+                if out == pd:
+                    return jsonify(msg2)
+                else:
+                    return jsonify(msg0)
             else:
-                return jsonify(msg0)
+                return jsonify(msg1)
         else:
-            return jsonify(msg1)
+            return jsonify(msg3), 401
     elif request.method == 'DELETE':
         out = fdb.child("coin_images").child(coin).remove()
         return jsonify(msg2)
