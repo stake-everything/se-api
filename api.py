@@ -13,10 +13,16 @@ CONF_PATH = ""
 # print(os.listdir(CONF_PATH))
 # print(CONF_PATH)
 
-with open(CONF_PATH + "config.json", "r") as f:
+with open(CONF_PATH + "../config.json", "r") as f:
     conf = json.load(f)
 
+# Variables
+msg0 = {"status": "failed", "message": "Unkown reason."}
+msg1 = {"status": "failed", "message": "Content error"}
+msg2 = {"status": "success"}
+
 firebase = pyrebase.initialize_app(conf['firebase'])
+fdb = firebase.database()
 
 
 @ app.route(os.path.join(conf["root"], '/'), methods=['GET'])
@@ -26,13 +32,13 @@ def message():
 
 @ app.route(os.path.join(conf["root"], 'coins'), methods=['GET'])
 def get_coins():
-    coins = list(firebase.database().child("coins").get().val().keys())
+    coins = list(fdb.child("coins").get().val().keys())
     return jsonify(coins)
 
 
 @ app.route(os.path.join(conf["root"], 'farms'), methods=['GET'])
 def get_farms():
-    data = dict(firebase.database().child("coins").get().val())
+    data = dict(fdb.child("coins").get().val())
 
     coins = list(data.keys())
     sites = []
@@ -46,7 +52,7 @@ def get_farms():
 
 @ app.route(os.path.join(conf["root"], 'farms/tags'), methods=['GET'])
 def get_farm_tags():
-    data = list(firebase.database().child("sites").get().val())
+    data = list(fdb.child("sites").get().val())
 
     rd = {}
     for site in data:
@@ -55,9 +61,38 @@ def get_farm_tags():
     return jsonify(rd)
 
 
+@ app.route(os.path.join(conf["root"], 'farms/<tag>'), methods=['GET', 'POST', 'DELETE'])
+def farm(tag):
+    def check_format(pd):
+        k = pd.keys()
+        check0 = "url" not in k
+        check1 = "url" not in k
+        check2 = "code" not in k
+        if check0 or check1 or check2:
+            return False
+        else:
+            return True
+
+    #data = list(fdb.child("farms").get().val())
+    if request.method == 'GET':
+        out = fdb.child("farms").child(tag).get().val()
+        return jsonify(out)
+    elif request.method == 'POST':
+        pd = request.json
+        if pd:
+            if check_format(pd):
+                out = fdb.child("farms").child(tag).update(pd)
+                print(out)
+                return jsonify(msg2)
+            else:
+                return jsonify(msg1)
+        else:
+            return jsonify(msg1)
+
+
 @ app.route(os.path.join(conf["root"], 'info'), methods=['GET'])
 def get_info():
-    data = dict(firebase.database().child("coins").get().val())
+    data = dict(fdb.child("coins").get().val())
 
     coins = list(data.keys())
     for coin in coins:
@@ -68,25 +103,41 @@ def get_info():
 
 @ app.route(os.path.join(conf["root"], 'images'), methods=['GET'])
 def get_images():
-    data = dict(firebase.database().child("coins").get().val())
-
-    coins = list(data.keys())
-    for coin in coins:
-        del data[coin]["info"]
-
+    data = dict(fdb.child("coin_images").get().val())
     return jsonify(data)
+
+
+@ app.route(os.path.join(conf["root"], 'images/<coin>'), methods=['GET', 'POST', 'DELETE'])
+def coin_images(coin):
+
+    if request.method == 'GET':
+        data = fdb.child("coin_images").child(coin).get().val()
+        return jsonify(data)
+    elif request.method == 'POST':
+        pd = request.json
+        if pd and len(pd) == 1:
+            out = fdb.child("coin_images").update(pd)
+            if out == pd:
+                return jsonify(msg2)
+            else:
+                return jsonify(msg0)
+        else:
+            return jsonify(msg1)
+    elif request.method == 'DELETE':
+        out = fdb.child("coin_images").child(coin).remove()
+        return jsonify(msg2)
 
 
 @ app.route(os.path.join(conf["root"], 'info/<coin>'), methods=['GET'])
 def get_coin_info(coin):
-    data = dict(firebase.database().child("coins").get().val())
+    data = dict(fdb.child("coins").get().val())
     return jsonify(data[coin.upper()])
 
 
 @ app.route(os.path.join(conf["root"], 'coins/<farm_tag>'), methods=['GET'])
 def get_farm_coins(farm_tag):
-    data = dict(firebase.database().child("coins").get().val())
-    farms = list(firebase.database().child("sites").get().val())
+    data = dict(fdb.child("coins").get().val())
+    farms = list(fdb.child("sites").get().val())
     coins = list(data.keys())
 
     token_earned = request.args.get('token_earned')
@@ -118,60 +169,6 @@ def get_farm_coins(farm_tag):
     return jsonify({farm_name: farm_coins})
 
 
-# @ app.route(os.path.join(conf["root"], 'countries/<org>'), methods=['GET'])
-# def get_orgs_countries(org):
-#     client = pymongo.MongoClient(conf["mongo"])
-#     db = client["masses"]
-#     coll = db[org]
-#     return jsonify(coll.find().distinct("country"))
-
-
-# @ app.route(os.path.join(conf["root"], 'masses'), methods=['GET'])
-# def get_all_masses():
-#     client = pymongo.MongoClient(conf["mongo"])
-#     db = client["masses"]
-
-#     coll1 = client["masses"]["fssp"]
-#     coll2 = client["masses"]["sspv"]
-
-#     out = parse_bson(coll1.find(request.args)) + \
-#         parse_bson(coll2.find(request.args))
-
-#     return jsonify(out)
-
-
-# @ app.route(os.path.join(conf["root"], 'masses/<org>'), methods=['GET'])
-# def get_org_masses(org):
-
-#     client = pymongo.MongoClient(conf["mongo"])
-#     db = client["masses"]
-
-#     coll = client["masses"][org]
-
-#     out = parse_bson(coll.find(request.args))
-
-#     return jsonify(out)
-
-
-# @ app.route('/masses/<organization>/<id>', methods=['POST'])
-# def update_masses():
-#     """Return all masses usa.
-
-#     Options: filter by state
-#     """
-#     # add options
-#     location = request.args.get('location')
-
-#     client = pymongo.MongoClient(conf["mongo"])
-#     db = client["masses"]
-#     fssp = db["fssp"].find_one()
-#     sspv = db["sspv"].find_one()
-#     del fssp['_id']
-#     del sspv['_id']
-
-#     return jsonify(fssp.update(sspv))
-
-
 # @ app.route(os.path.join(conf["root"], 'test'), methods=['GET', 'POST'])
 # def get_test():
 
@@ -191,7 +188,6 @@ def get_farm_coins(farm_tag):
 #     # msg = request.get_json()
 #     # return jsonify(msg)
 #     return jsonify({"headers": msg, "args": args, "form": f, "url": u})
-
 
 if __name__ == "__main__":
     app.run(debug=True)
