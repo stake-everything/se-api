@@ -74,11 +74,11 @@ def farm(tag):
         else:
             return True
 
-    print("args", list(request.args.keys()))  # k/v
-    print("data", request.data)  # add content type you can get --data here
-    print("form", request.form)  # -F resp
-    print("json", request.json)  # add content type you can get --data here
-    print("values", request.values)  # any data here
+    # print("args", list(request.args.keys()))  # k/v
+    # print("data", request.data)  # add content type you can get --data here
+    # print("form", request.form)  # -F resp
+    # print("json", request.json)  # add content type you can get --data here
+    # print("values", request.values)  # any data here
 
     key = request.args["key"] if "key" in list(request.args.keys()) else None
 
@@ -116,19 +116,19 @@ def get_info():
     return jsonify(data)
 
 
-@ app.route(os.path.join(conf["root"], 'images'), methods=['GET'])
-def get_images():
-    data = dict(fdb.child("coin_images").get().val())
+@ app.route(os.path.join(conf["root"], 'images/<coin>'), methods=['GET'])
+def get_images(coin):
+    data = dict(fdb.child("coin_images").child(coin).get().val())
     return jsonify(data)
 
 
-@ app.route(os.path.join(conf["root"], 'images/<coin>'), methods=['GET', 'POST', 'DELETE'])
+@ app.route(os.path.join(conf["root"], 'images'), methods=['GET', 'POST', 'DELETE'])
 def coin_images(coin):
 
     key = request.args["key"] if "key" in list(request.args.keys()) else None
 
     if request.method == 'GET':
-        data = fdb.child("coin_images").child(coin).get().val()
+        data = fdb.child("coin_images").get().val()
         return jsonify(data)
     elif request.method == 'POST':
         if key == conf["api_key"]:
