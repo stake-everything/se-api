@@ -138,7 +138,6 @@ def coin_images():
 
     if request.method != 'GET':
         pd = request.json
-        print(pd)
         if key == conf["api_key"]:
             if request.method in ['POST', 'PUT']:
                 if put_check(pd):
