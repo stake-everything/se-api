@@ -62,13 +62,13 @@ def get_farm_tags():
     return jsonify(rd)
 
 
-@ app.route(os.path.join(conf["root"], 'farms/<tag>'), methods=['GET', 'POST', 'DELETE'])
+@ app.route(os.path.join(conf["root"], 'farms/<tag>'), methods=['GET', 'POST', 'DELETE', 'PUT'])
 def farm(tag):
     def check_format(pd):
         k = set(pd.keys())
         s = set(["url", "name", "code", "active"])
 
-        if s-k == 0:
+        if len(s-k) == 0:
             return True
         else:
             return False
