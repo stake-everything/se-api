@@ -65,14 +65,13 @@ def get_farm_tags():
 @ app.route(os.path.join(conf["root"], 'farms/<tag>'), methods=['GET', 'POST', 'DELETE'])
 def farm(tag):
     def check_format(pd):
-        k = pd.keys()
-        check0 = "url" not in k
-        check1 = "url" not in k
-        check2 = "code" not in k
-        if check0 or check1 or check2:
-            return False
-        else:
+        k = set(pd.keys())
+        s = set(["url", "name", "code", "active"])
+
+        if s-k == 0:
             return True
+        else:
+            return False
 
     # print("args", list(request.args.keys()))  # k/v
     # print("data", request.data)  # add content type you can get --data here

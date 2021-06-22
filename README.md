@@ -272,11 +272,12 @@ Ex: curl -X POST /images/BTC
 
 (POST) Adds a url for a cryptocurrency to the firebase db.
 
-| Key    | Value | Type   | Description                               |
-| ------ | ----- | ------ | ----------------------------------------- |
-| "name" | json  | string | Name of the farm project                  |
-| "url"  | json  | string | Url to the farms application              |
-| "code" | json  | int    | Integer code used in data scrape sequence |
+| Key      | Value Type | Value Description                         |
+| -------- | ---------- | ----------------------------------------- |
+| "name"   | string     | Name of the farm project                  |
+| "url"    | string     | Url to the farms application              |
+| "code"   | int        | Integer code used in data scrape sequence |
+| "active" | bool       | True or false                             |
 
 ```
 Ex: curl -X POST -H 'Content-Type: application/json' /farm/beefy --data '{"name":"Beefy Finance", "url": "https://app.beefy.finance/", "code": 3 }'
