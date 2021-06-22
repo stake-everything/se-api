@@ -3,8 +3,7 @@ import os
 import pyrebase
 import json
 
-# curl -X POST -H "Content-Type: application/json" -d '{"data":"test"}' http://127.0.0.1:5000/test
-
+# https://catonmat.net/cookbooks/curl/use-basic-http-authentication
 
 app = Flask(__name__)
 
@@ -62,7 +61,7 @@ def get_farm_tags():
     return jsonify(rd)
 
 
-@ app.route(os.path.join(conf["root"], 'farms/<tag>'), methods=['GET', 'POST', 'DELETE', 'PUT'])
+@ app.route(os.path.join(conf["root"], 'farms/<tag>'), methods=['GET', 'POST', 'DELETE', 'PATCH'])
 def farm(tag):
     def check_format(pd):
         k = set(pd.keys())
@@ -81,7 +80,7 @@ def farm(tag):
 
     key = request.args["key"] if "key" in list(request.args.keys()) else None
 
-    #data = list(fdb.child("farms").get().val())
+    # data = list(fdb.child("farms").get().val())
     if request.method == 'GET':
         out = fdb.child("farms").child(tag).get().val()
         return jsonify(out)
@@ -117,34 +116,58 @@ def get_info():
 
 @ app.route(os.path.join(conf["root"], 'images/<coin>'), methods=['GET'])
 def get_images(coin):
-    data = dict(fdb.child("coin_images").child(coin).get().val())
-    return jsonify(data)
+    if request.method == 'GET':
+        data = dict(fdb.child("coin_images").child(coin).get().val())
+        return jsonify(data)
 
 
-@ app.route(os.path.join(conf["root"], 'images'), methods=['GET', 'POST', 'DELETE'])
-def coin_images(coin):
+@ app.route(os.path.join(conf["root"], 'images'), methods=['GET', 'POST', 'DELETE', 'PUT'])
+def coin_images():
+
+    def put_check(pd):
+        if len(pd) == 1:
+            return True
+        else:
+            return False
 
     key = request.args["key"] if "key" in list(request.args.keys()) else None
 
     if request.method == 'GET':
-        data = fdb.child("coin_images").get().val()
-        return jsonify(data)
-    elif request.method == 'POST':
+        _d = fdb.child("coin_images").get().val()
+        return jsonify(_d)
+
+    if request.method != 'GET':
+        pd = request.json
+        print(pd)
         if key == conf["api_key"]:
-            pd = request.json
-            if pd and len(pd) == 1:
-                out = fdb.child("coin_images").update(pd)
-                if out == pd:
-                    return jsonify(msg2)
+            if request.method in ['POST', 'PUT']:
+                if put_check(pd):
+                    out = fdb.child("coin_images").update(pd)
+                    if out == pd:
+                        return jsonify(msg2), 202
+                    else:
+                        return jsonify(msg0)
                 else:
-                    return jsonify(msg0)
-            else:
-                return jsonify(msg1)
+                    return jsonify(msg1)
+
+            elif request.method == 'DELETE':
+
+                print(request.content_type)
+
+                if request.content_type == "application/json":
+                    _d = request.json
+                elif request.content_type == None:
+                    _d = dict(request.args)
+
+                coin = _d["coin"] if "coin" in list(_d.keys()) else None
+
+                if coin:
+                    out = fdb.child("coin_images").child(coin.upper()).remove()
+                    return jsonify(msg2), 200
+                else:
+                    return jsonify(msg1)
         else:
             return jsonify(msg3), 401
-    elif request.method == 'DELETE':
-        out = fdb.child("coin_images").child(coin).remove()
-        return jsonify(msg2)
 
 
 @ app.route(os.path.join(conf["root"], 'info/<coin>'), methods=['GET'])
