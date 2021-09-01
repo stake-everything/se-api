@@ -2,18 +2,15 @@ from flask import Flask, jsonify, request
 import os
 import pyrebase
 import json
+#from config import config
 
 # https://catonmat.net/cookbooks/curl/use-basic-http-authentication
 
+with open("config.json") as jf:
+    config = json.load(jf)
+
+
 app = Flask(__name__)
-
-
-CONF_PATH = ""
-# print(os.listdir(CONF_PATH))
-# print(CONF_PATH)
-
-with open(CONF_PATH + "../config.json", "r") as f:
-    conf = json.load(f)
 
 # Variables
 msg0 = {"status": "failed", "message": "Unkown reason."}
@@ -21,22 +18,22 @@ msg1 = {"status": "failed", "message": "Content error."}
 msg2 = {"status": "success"}
 msg3 = {"status": "failed", "message": "Not authorized."}
 
-firebase = pyrebase.initialize_app(conf['firebase'])
+firebase = pyrebase.initialize_app(config['firebase'])
 fdb = firebase.database()
 
 
-@ app.route(os.path.join(conf["root"], '/'), methods=['GET'])
+@ app.route(os.path.join(config["root"], '/'), methods=['GET'])
 def message():
     return jsonify({"message": "Stake Everything API. Documentation here: https://github.com/stake-everything/se-api"})
 
 
-@ app.route(os.path.join(conf["root"], 'coins'), methods=['GET'])
+@ app.route(os.path.join(config["root"], 'coins'), methods=['GET'])
 def get_coins():
     coins = list(fdb.child("coins").get().val().keys())
     return jsonify(coins)
 
 
-@ app.route(os.path.join(conf["root"], 'farms'), methods=['GET'])
+@ app.route(os.path.join(config["root"], 'farms'), methods=['GET'])
 def get_farms():
     data = dict(fdb.child("coins").get().val())
 
@@ -50,7 +47,7 @@ def get_farms():
     return jsonify(sites)
 
 
-@ app.route(os.path.join(conf["root"], 'farms/tags'), methods=['GET'])
+@ app.route(os.path.join(config["root"], 'farms/tags'), methods=['GET'])
 def get_farm_tags():
     data = list(fdb.child("sites").get().val())
 
@@ -61,7 +58,7 @@ def get_farm_tags():
     return jsonify(rd)
 
 
-@ app.route(os.path.join(conf["root"], 'farms/<tag>'), methods=['GET', 'POST', 'DELETE', 'PATCH'])
+@ app.route(os.path.join(config["root"], 'farms/<tag>'), methods=['GET', 'POST', 'DELETE'])
 def farm(tag):
     def check_format(pd):
         k = set(pd.keys())
@@ -72,12 +69,6 @@ def farm(tag):
         else:
             return False
 
-    # print("args", list(request.args.keys()))  # k/v
-    # print("data", request.data)  # add content type you can get --data here
-    # print("form", request.form)  # -F resp
-    # print("json", request.json)  # add content type you can get --data here
-    # print("values", request.values)  # any data here
-
     key = request.args["key"] if "key" in list(request.args.keys()) else None
 
     # data = list(fdb.child("farms").get().val())
@@ -85,7 +76,7 @@ def farm(tag):
         out = fdb.child("farms").child(tag).get().val()
         return jsonify(out)
     elif request.method == 'POST':
-        if key == conf["api_key"]:
+        if key == config["api_key"]:
             pd = request.json
             if pd:
                 if check_format(pd):
@@ -103,7 +94,7 @@ def farm(tag):
         return jsonify(msg2)
 
 
-@ app.route(os.path.join(conf["root"], 'info'), methods=['GET'])
+@ app.route(os.path.join(config["root"], 'info'), methods=['GET'])
 def get_info():
     data = dict(fdb.child("coins").get().val())
 
@@ -114,14 +105,14 @@ def get_info():
     return jsonify(data)
 
 
-@ app.route(os.path.join(conf["root"], 'images/<coin>'), methods=['GET'])
+@ app.route(os.path.join(config["root"], 'images/<coin>'), methods=['GET'])
 def get_images(coin):
     if request.method == 'GET':
         data = dict(fdb.child("coin_images").child(coin).get().val())
         return jsonify(data)
 
 
-@ app.route(os.path.join(conf["root"], 'images'), methods=['GET', 'POST', 'DELETE', 'PUT'])
+@ app.route(os.path.join(config["root"], 'images'), methods=['GET', 'POST', 'DELETE', 'PUT'])
 def coin_images():
 
     def put_check(pd):
@@ -138,7 +129,7 @@ def coin_images():
 
     if request.method != 'GET':
         pd = request.json
-        if key == conf["api_key"]:
+        if key == config["api_key"]:
             if request.method in ['POST', 'PUT']:
                 if put_check(pd):
                     out = fdb.child("coin_images").update(pd)
@@ -169,13 +160,13 @@ def coin_images():
             return jsonify(msg3), 401
 
 
-@ app.route(os.path.join(conf["root"], 'info/<coin>'), methods=['GET'])
+@ app.route(os.path.join(config["root"], 'info/<coin>'), methods=['GET'])
 def get_coin_info(coin):
     data = dict(fdb.child("coins").get().val())
     return jsonify(data[coin.upper()])
 
 
-@ app.route(os.path.join(conf["root"], 'coins/<farm_tag>'), methods=['GET'])
+@ app.route(os.path.join(config["root"], 'coins/<farm_tag>'), methods=['GET'])
 def get_farm_coins(farm_tag):
     data = dict(fdb.child("coins").get().val())
     farms = list(fdb.child("sites").get().val())
@@ -210,26 +201,39 @@ def get_farm_coins(farm_tag):
     return jsonify({farm_name: farm_coins})
 
 
-# @ app.route(os.path.join(conf["root"], 'test'), methods=['GET', 'POST'])
-# def get_test():
+@ app.route(os.path.join(config["root"], 'collect'), methods=['POST'])
+def run_data_aq():
 
-#     # msg = request.args.get()
-#     request.get_data()
-#     msg = request.data
+    key = request.json["key"] if "key" in list(request.json.keys()) else None
+    if key:
+        if key == config["api_key"]:
+            out = run_func()
+            return "Done \n"
+            return jsonify({"status": "succes", "message": "data update."})
+    else:
+        return jsonify(msg3)
 
-#     # get header info
-#     msg = dict(request.headers)
+    # @ app.route(os.path.join(conf["root"], 'test'), methods=['GET', 'POST'])
+    # def get_test():
 
-#     # get query parameters:
-#     args = request.args
+    #     # msg = request.args.get()
+    #     request.get_data()
+    #     msg = request.data
 
-#     u = request.url
-#     # request.json
-#     f = request.form
-#     # msg = request.get_json()
-#     # return jsonify(msg)
-#     return jsonify({"headers": msg, "args": args, "form": f, "url": u})
+    #     # get header info
+    #     msg = dict(request.headers)
+
+    #     # get query parameters:
+    #     args = request.args
+
+    #     u = request.url
+    #     # request.json
+    #     f = request.form
+    #     # msg = request.get_json()
+    #     # return jsonify(msg)
+    #     return jsonify({"headers": msg, "args": args, "form": f, "url": u})
+
 
 if __name__ == "__main__":
-    app.run(debug=True)
-    # app.run(debug=False, host="0.0.0.0", port="5000")
+    # app.run(debug=True)
+    app.run(debug=False, host="0.0.0.0", port="5000")
